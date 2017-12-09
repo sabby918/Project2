@@ -83,6 +83,20 @@ function get_courses($connection) {
     return json_encode($final);
 }
 
+
+
+function rent($connection,$car_id) {
+    
+    $query = "UPDATE car SET Status='2' WHERE ID = '$car_id' AND Customer_ID='" . $_SESSION["username"] . "'";
+
+    $result = mysqli_query($connection, $query);
+    if (!$result)
+        return "fail";
+    return "success";
+}
+
+
+
 function logout() {
     // Unset all of the session variables.
     $_SESSION = array();
