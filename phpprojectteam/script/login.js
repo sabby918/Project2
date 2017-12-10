@@ -2,7 +2,7 @@ $(document).ready(init);
 
 function init(){
     $("#search-button").on("click",login);
-    $("#input").on("keydown",function(event){maybe_login(event);});
+    $("input").on("keydown",function(event){maybe_login(event);});
 }
 
 function maybe_login(event){
@@ -11,6 +11,7 @@ function maybe_login(event){
 }
 
 function login() {
+    $("#loading").attr("class","loading");
         $.ajax({
         method: "POST",
         url: "server/login_session.php",
