@@ -5,6 +5,7 @@ function init() {
     $("#logout-link").on("click",logout);
     $("#findcar").on("keydown",function(event){maybe_search(event);});
     show_rentals();
+    returned_cars();
 }
 
 function maybe_search(event){
@@ -43,6 +44,22 @@ function show_rentals(){
             attach_events();
         }
     });    
+}
+
+function returned_cars(){
+    $.ajax({
+        method: "POST",
+        url:"server/controller.php",
+        dataType:"json",
+        data: {type: "returned"},
+        success: function (data){
+            var info_template=$("#returned-car-template").html();
+            var html_maker= new htmlMaker(info_template);
+            var html = html_maker.getHTML(data);
+            $("#returned_cars").html(html);
+        }
+    });
+
 }
 
 function logout() {
@@ -88,6 +105,7 @@ function return_car(id){
             if($.trim(data)=="success"){
                 find_car();
                 show_rentals();
+                returned_cars();
                 alert("The car has been returned successfully");
             }
             else{
