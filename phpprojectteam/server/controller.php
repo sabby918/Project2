@@ -14,6 +14,9 @@ if(isset($_POST['type']) && is_session_active()){
         case "rentals":
             $result = get_cars($connection);
             break;
+        case "returned":
+            $result = returned_cars($connection);
+            break;
         case "rent":
             $result = rent($connection, sanitizeMYSQL($connection, $_POST["id"]));
             break;
@@ -145,6 +148,36 @@ function return_car($connection, $id){
     if(!$result)
         return "fail";
     return "success";
+}
+
+function returned_cars($connection){
+  $history = array();
+  $query = "SELECT car.`Picture`,car.`Picture_type`,carspecs.`Make`,carspecs.`Model`,carspecs.`YearMade`,carspecs.`Size`,rental.`ID` as ID,rental.`returnDate`"
+            ." FROM carspecs JOIN car ON car.`CarSpecsID`=carspecs.`ID`"
+            ." JOIN rental ON rental.carid=car.`ID`"
+            ." JOIN customer ON customer.id=rental.`CustomerID`"
+            ." WHERE customer.id='" . $_SESSION["username"] . "' AND Rental.status = '2'";
+  $result = mysqli_query($connection,$query);
+  $text="";
+  
+  if (!$result)
+      return json_encode($array);
+  else{
+      $row_count = mysqli_num_rows($result);
+      for ($i = 0; $i<$row_count; $i++){
+          $row = mysqli_fetch_array($result);
+          $array=array();
+          $array["picture"]= 'data:'.$row["Picture_type"]. ';base64,'.base64_encode($row["Picture"]);
+          $array["make"]=$row["Make"];
+          $array["model"]=$row["Model"];
+          $array["year"]=$row["YearMade"];
+          $array["size"]=$row["Size"];
+          $array["rental_id"]=$row["ID"];
+          $array["return_date"]=$row["returnDate"];
+          $history[]=$array;
+      }
+  }
+  return json_encode($history);
 }
 
 function is_session_active() {
