@@ -2,7 +2,7 @@ $(document).ready(init);
 
 function init(){
     $("#search-button").on("click",login);
-    $("#password-input").on("keydown",function(event){maybe_login(event);});
+    $("#input").on("keydown",function(event){maybe_login(event);});
 }
 
 function maybe_login(event){
