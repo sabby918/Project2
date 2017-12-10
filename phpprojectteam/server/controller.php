@@ -1,76 +1,90 @@
 <?php
 
-
-require_once 'connection.php';
+include "sanitization.php";
+session_start();
+$result = "";
 
 //only process the data if there a request was made and the session is active
-
-if (isset($_POST['findcar']) && trim($_POST['findcar']) != "") {
-    $array = array();
-    $data = $_POST['findcar'];
-    /* select all students whose first names or last names contain the text the user has entered */
-    $query = "SELECT * FROM carspecs JOIN car ON carspecs.ID = car.ID WHERE Make LIKE '%$data%' ";
+if(isset($_POST['type']) && is_session_active()){
+    session_regenerate_id();
+    $_SESSION['start'] = time();
+    $request_type = sanitizeMYSQL($connection, $_POST['type']);
     
-    $result = mysqli_query($connection,$query);
+    switch ($request_type){
+        case "rentals":
+            $result = get_cars($connection);
+            break;
+        case "rent":
+            $result = rent($connection, sanitizeMYSQL($connection, $_POST["id"]));
+            break;
+        case "return":
+            $result = return_car($connection, sanitizeMYSQL($connection, $_POST["id"]));
+            break;
+        case "add":
+            $result = add($connection, sanitizeMYSQL($connection, $_POST["id"]));
+            break;
+        case "update":
+            $result = update($connection, sanitizeMYSQL($connection, $_POST["id"]));
+            break;
+        case "logout":
+            logout();
+            $result= "success";
+            break;
+        case "find":
+            $result = find_cars($connection, sanitizeMYSQL($connection, $_POST["attribute"]));
+            break;
+    }
+}
 
+echo $result;
+
+function get_cars($connection) {
+    //$final = array();
+    //$final["rented_cars"] = array();
+    $query = "SELECT Car.Picture, Car.Picture_type, Car.CarSpecsID, CarSpecs.Make, CarSpecs.Model, CarSpecs.YearMade, CarSpecs.Size, Rental.ID as rental_id, Rental.rentDate as rent_date "
+            . "FROM Car INNER JOIN CarSpecs ON Car.CarSpecsID = CarSpecs.ID INNER JOIN Rental ON Car.ID = Rental.carID WHERE CustomerID ='" . $_SESSION["username"] . "' AND Car.status ='2' AND Rental.status = '1' ";
+    
+    $result = mysqli_query($connection, $query);
+    $text = "";
+    $final_result=array();
     if (!$result)
-        return json_encode($array);
+    {       
+       return json_encode($array);
+    }
     else {
         $row_count = mysqli_num_rows($result);
-        for ($i = 0; $i < $row_count; $i++) { //if the student exists in the database
+        for ($i = 0; $i < $row_count; $i++) {
             $row = mysqli_fetch_array($result);
-            $array["picture"] = 'data:' . $row["Picture_Type"] . ';base64,' . base64_encode($row["Picture"]);
+            $array = array();
             $array["make"] = $row["Make"];
             $array["model"] = $row["Model"];
             $array["year"] = $row["YearMade"];
-            $array["color"] = $row["Color"];
-            $array["size"] = $row["Size"];
-            $array["ID"] = $row["ID"];
+            $array["size"] = $row["Size"];         
+            $array["rental_ID"] = $row["rental_id"];
+            $array["rent_date"] = $row["rent_date"];
+            $array["picture"] = 'data:' . $row["Picture_type"] . ';base64,' . base64_encode($row["Picture"]);
+            $final_result[] = $array;
         }
     }
-    echo $array;
-    
+    return json_encode($final_result);
+        
 }
 
-function is_session_active() {
-    return isset($_SESSION) && count($_SESSION) > 0 && time() < $_SESSION['start'] + 60 * 5; //check if it has been 5 minutes
-}
-
-function drop($connection,$course_id) {
-    $query = "DELETE FROM Enrollment WHERE Course_ID='$course_id' AND Student_ID='" . $_SESSION["username"] . "'";
-    $result = mysqli_query($connection, $query);
-    if (!$result)
-        return "fail";
-    return "success";
-}
-
-function get_info($connection) {
-    $array = array();
-    $query = "SELECT * FROM customer WHERE ID='" . $_SESSION["username"] . "'";
-    $result = mysqli_query($connection, $query);
-    if (!$result)
-        return json_encode($array);
-    else {
-        $row_count = mysqli_num_rows($result);
-        if ($row_count == 1) { //if the student exists in the database
-            $row = mysqli_fetch_array($result);
-            $array["picture"] = 'data:' . $row["Picture_Type"] . ';base64,' . base64_encode($row["Picture"]);
-            $array["Name"] = $row["FirstName"] . " " . $row["LastName"];
-            $array["Gender"] = $row["Gender"] == 'M' ? "Male" : "Female";
-            $array["Age"] = date_diff(date_create($row["DateOfBirth"]), date_create('now'))->y;
-        }
-    }
-    return json_encode($array);
-}
-
-function get_courses($connection) {
+function find_cars($connection, $attribute) {
     $final = array();
-    $final["courses"] = array();
+    //$final[] = array();
     //write a query about the enrolled courses for that student. The student ID is from the session
-    $query = "SELECT Course.ID, Course.Description, Course.Title, Enrollment.Enrollment_Date"
-            . " FROM Course INNER JOIN Enrollment ON Course.ID=Enrollment.Course_ID"
-            . " INNER JOIN Student ON Student.ID=Enrollment.Student_ID"
-            . " WHERE Student_ID='" . $_SESSION["username"] . "'";
+    
+ 
+    $query = "SELECT Car.ID as ID, carspecs.`Make`, carspecs.`Model`, carspecs.`YearMade`, carspecs.`Size`, car.`Color`, car.`Picture`, car.`Picture_type`"
+            . " FROM car INNER JOIN carspecs"
+            . " ON carspecs.ID = car.CarSpecsID"
+            . " WHERE Status = '1' AND (Make LIKE '$attribute' OR"
+            . " Model LIKE '$attribute' OR"
+            . " YearMade LIKE '$attribute' OR"
+            . " Size LIKE '$attribute' OR"
+            . " Color LIKE '$attribute') ";
+    
 
     $result = mysqli_query($connection, $query);
     $text = "";
@@ -81,14 +95,60 @@ function get_courses($connection) {
         for ($i = 0; $i < $row_count; $i++) {
             $row = mysqli_fetch_array($result);
             $array = array();
+            $array["make"] = $row["Make"];
+            $array["model"] = $row["Model"];
+            $array["year"] = $row["YearMade"];
+            $array["color"] = $row["Color"];
+            $array["size"] = $row["Size"];
             $array["ID"] = $row["ID"];
-            $array["Title"] = $row["Title"];
-            $array["Description"] = $row["Description"];
-            $array["Enrollment_Date"] = $row["Enrollment_Date"];
-            $final["courses"][] = $array;
+            $array["Picture"] = 'data:' . $row["Picture_Type"] . ';base64,' . base64_encode($row["Picture"]);
+            $final[] = $array;
         }
     }
     return json_encode($final);
+        //return $final;
+        
+}
+
+function add($connection, $id){
+    $query = "INSERT INTO Rental(rentDate, status, CustomerID, carID) VALUES('" . date("Y-m-d") . "', '1', '" . 
+            $_SESSION["username"] . "', '" . $id ."')";
+    $result = mysqli_query($connection, $query);
+    
+    if(!$result)
+        return "fail";
+    return "success";
+}
+
+function update($connection, $id){
+    $query = "UPDATE rental SET returnDate = '" . date("Y-m-d") . "', status = '2' WHERE ID =$id";
+    $result = mysqli_query($connection, $query);
+    
+    if(!$result)
+        return "fail";
+    return "success";
+}
+
+function rent($connection, $id){
+    $query = "UPDATE car SET status ='2' WHERE ID =$id";
+    $result = mysqli_query($connection, $query);
+    
+    if(!$result)
+        return "fail";
+    return "success";
+}
+
+function return_car($connection, $id){
+    $query = "UPDATE car INNER JOIN Rental ON Car.ID = Rental.carID SET Car.status ='1' WHERE Rental.ID =$id";
+    $result = mysqli_query($connection, $query);
+    
+    if(!$result)
+        return "fail";
+    return "success";
+}
+
+function is_session_active() {
+    return isset($_SESSION) && count($_SESSION) > 0 && time() < $_SESSION['start'] + 60 * 5; //check if it has been 5 minutes
 }
 
 function logout() {
@@ -106,5 +166,7 @@ function logout() {
 // Finally, destroy the session.
     session_destroy();
 }
+
+
 
 ?>
