@@ -11,6 +11,9 @@ if(isset($_POST['type']) && is_session_active()){
     $request_type = sanitizeMYSQL($connection, $_POST['type']);
     
     switch ($request_type){
+        case "username":
+            $result = set_username($connection);
+            break;
         case "rentals":
             $result = get_cars($connection);
             break;
@@ -40,6 +43,22 @@ if(isset($_POST['type']) && is_session_active()){
 }
 
 echo $result;
+
+function set_username($connection){
+    
+    $query = "SELECT * FROM Customer WHERE ID='" . $_SESSION["username"] . "'";
+    $result = mysqli_query($connection, $query);
+    if(!$result)
+        return "fail";
+    else{
+        $row_count = mysqli_num_rows($result);
+        if($row_count == 1){
+            $row = mysqli_fetch_array($result);
+            $name = $row["Name"];
+        }
+    }
+    return $name;
+}
 
 function get_cars($connection) {
     //$final = array();

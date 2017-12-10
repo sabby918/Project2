@@ -3,18 +3,27 @@ $(document).ready(init);
 function init() {
     $("#find-car").on("click",find_car);
     $("#logout-link").on("click",logout);
-    $('#findcar').keypress(function(event) {
-        if (event.keyCode == 13 || event.which == 13)
-            find_car();
-        });
+    $("#findcar").on("keydown",function(event){maybe_search(event);});
+    set_username();
     show_rentals();
     returned_cars();
 }
 
-
 function maybe_search(event){
     //if(event.keycode == 13)
         find_car();
+}
+
+function set_username(){
+    $.ajax({
+        method: "POST",
+        url: "server/controller.php",
+        dataType: "text",
+        data: {type: "username"},
+        success: function (data) {
+           $("#username").text(data);
+        }
+    });
 }
 
 function find_car(){
