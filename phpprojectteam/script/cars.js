@@ -3,9 +3,13 @@ $(document).ready(init);
 function init() {
     $("#find-car").on("click",find_car);
     $("#logout-link").on("click",logout);
-    $("#findcar").on("keydown",function(event){maybe_search(event);});
+    $('#findcar').keypress(function(event) {
+        if (event.keyCode == 13 || event.which == 13)
+            find_car();
+        });
     show_rentals();
 }
+
 
 function maybe_search(event){
     //if(event.keycode == 13)
